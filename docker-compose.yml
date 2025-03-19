@@ -1,0 +1,46 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+    networks:
+      - microservices
+
+  service-a:
+    build:
+      context: ./service-a
+    environment:
+      - SERVICE_B_URL=http://service-b:8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.service-a.rule=PathPrefix(`/service-a`)"
+      - "traefik.http.routers.service-a.entrypoints=web"
+      - "traefik.http.middlewares.service-a-strip.stripprefix.prefixes=/service-a"
+      - "traefik.http.routers.service-a.middlewares=service-a-strip"
+    networks:
+      - microservices
+
+  service-b:
+    build:
+      context: ./service-b
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.service-b.rule=PathPrefix(`/service-b`)"
+      - "traefik.http.routers.service-b.entrypoints=web"
+      - "traefik.http.middlewares.service-b-strip.stripprefix.prefixes=/service-b"
+      - "traefik.http.routers.service-b.middlewares=service-b-strip"
+    networks:
+      - microservices
+
+networks:
+  microservices:
+    driver: bridge
