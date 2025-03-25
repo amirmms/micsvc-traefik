@@ -1,17 +1,15 @@
 services:
   traefik:
     image: traefik:v3.3
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./config/traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - microservices
 
@@ -21,11 +19,15 @@ services:
     environment:
       - SERVICE_B_URL=http://service-b:8080
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.service-a.rule=PathPrefix(`/service-a`)"
-      - "traefik.http.routers.service-a.entrypoints=web"
-      - "traefik.http.middlewares.service-a-strip.stripprefix.prefixes=/service-a"
-      - "traefik.http.routers.service-a.middlewares=service-a-strip"
+      - traefik.enable=true
+      - traefik.http.middlewares.service-a-strip.stripprefix.prefixes=/service-a
+      - traefik.http.routers.service-a.middlewares=service-a-strip
+      - traefik.http.routers.service-a.rule=PathPrefix(`/service-a`) #http
+      - traefik.http.routers.service-a.entrypoints=web #http
+      - traefik.http.routers.service-a-https.tls=true #https
+      - traefik.http.routers.service-a-https.tls.certresolver=cloudflare #https - cert resolver name in traefik config file
+      - traefik.http.routers.service-a-https.entrypoints=websecure #https
+      - traefik.http.routers.service-a-https.rule=PathPrefix(`/service-a`) #https
     networks:
       - microservices
 
@@ -33,11 +35,15 @@ services:
     build:
       context: ./service-b
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.service-b.rule=PathPrefix(`/service-b`)"
-      - "traefik.http.routers.service-b.entrypoints=web"
-      - "traefik.http.middlewares.service-b-strip.stripprefix.prefixes=/service-b"
-      - "traefik.http.routers.service-b.middlewares=service-b-strip"
+      - traefik.enable=true
+      - traefik.http.middlewares.service-b-strip.stripprefix.prefixes=/service-b
+      - traefik.http.routers.service-b.middlewares=service-b-strip
+      - traefik.http.routers.service-b.rule=PathPrefix(`/service-b`) #http
+      - traefik.http.routers.service-b.entrypoints=web #http
+      - traefik.http.routers.service-b-https.tls=true #https
+      - traefik.http.routers.service-b-https.tls.certresolver=cloudflare #https - cert resolver name in traefik config file
+      - traefik.http.routers.service-b-https.entrypoints=websecure #https
+      - traefik.http.routers.service-b-https.rule=PathPrefix(`/service-b`) #https
     networks:
       - microservices
 

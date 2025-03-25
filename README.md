@@ -18,7 +18,7 @@ localhost/service-a/call-b
 
 localhost/service-b
 
-localhost/service-a/health
+localhost/service-b/health
 
 ---
 
